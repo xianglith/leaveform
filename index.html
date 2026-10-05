@@ -8,7 +8,7 @@
   <script>
     const webAppUrl = "https://script.google.com/macros/s/AKfycbzl8BdqoJVL0-LtFIQkUgMmoXXGKvF-Kt4Y6ZwPV73o0Cx7hX8vHYigFtEvMIDF4lVy/exec";
 
-    // 1. ตรวจสอบ iOS (iPhone/iPad) -> ถ้าใช่ให้ Redirect ทันที
+    // 1. เช็คว่าเป็น iOS (iPhone/iPad) หรือไม่ -> ถ้าใช่ Redirect ทันที
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
                   (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
@@ -16,32 +16,35 @@
       window.location.href = webAppUrl;
     }
 
-    // 2. ตัวแปรเก็บ Timer เพื่อสั่งหยุด
+    // 2. ตัวแปรเก็บสถานะและ Timer
+    let isAppLoaded = false;
     let fallbackTimer = null;
 
-    // ฟังก์ชันหยุดการ Redirect ทันทีเมื่อได้รับสัญญาณ
-    function stopRedirect() {
-      if (fallbackTimer) {
-        clearTimeout(fallbackTimer);
-        fallbackTimer = null;
-        console.log("GAS Loaded successfully. Redirect cancelled.");
+    function cancelRedirect(reason) {
+      if (!isAppLoaded) {
+        isAppLoaded = true;
+        if (fallbackTimer) {
+          clearTimeout(fallbackTimer);
+          fallbackTimer = null;
+        }
+        console.log("Redirect cancelled due to:", reason);
       }
     }
 
-    // 3. ตั้งเวลาถอยหลัง 6 วินาที (ถ้าไม่ได้รับสัญญาณจะ Redirect)
+    // 3. ตั้งเวลาถอยหลัง 8 วินาที
     fallbackTimer = setTimeout(function() {
-      console.log("Timeout reached. Redirecting...");
-      window.location.href = webAppUrl;
-    }, 6000);
+      if (!isAppLoaded) {
+        console.log("Timeout reached. Redirecting to Web App...");
+        window.location.href = webAppUrl;
+      }
+    }, 8000);
 
-    // 4. ดักฟัง postMessage จาก Google Apps Script (ยืดหยุ่นขึ้น)
+    // 4. ดักฟังการส่งสัญญาณข้าม Domain
     window.addEventListener("message", function(event) {
-      try {
-        // ถ้ารับข้อความที่มีคำว่า GAS_LOADED ให้สั่งหยุด Redirect ทันที
-        if (event.data && typeof event.data === "string" && event.data.indexOf("GAS_LOADED") !== -1) {
-          stopRedirect();
-        }
-      } catch (e) {}
+      // ยกเลิก Redirect ทันทีถ้ารับข้อความ GAS_LOADED
+      if (event.data && (event.data === "GAS_LOADED" || (typeof event.data === "string" && event.data.includes("GAS_LOADED")))) {
+        cancelRedirect("postMessage GAS_LOADED");
+      }
     }, false);
   </script>
 
@@ -63,10 +66,10 @@
 </head>
 <body>
 
-  <!-- เพิ่ม onload="stopRedirect()" สำรองไว้อีกชั้น -->
+  <!-- ใช้ onload สั่งยกเลิก Redirect ร่วมด้วย -->
   <iframe 
     src="https://script.google.com/macros/s/AKfycbzl8BdqoJVL0-LtFIQkUgMmoXXGKvF-Kt4Y6ZwPV73o0Cx7hX8vHYigFtEvMIDF4lVy/exec"
-    onload="stopRedirect()">
+    onload="cancelRedirect('iframe onload event')">
   </iframe>
 
 </body>
