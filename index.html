@@ -6,9 +6,9 @@
   <title>Leave View</title>
   
   <script>
-    const webAppUrl = "https://script.google.com/macros/s/AKfycbzl8BdqoJVL0-LtFIQkUgMmoXXGKvF-Kt4Y6ZwPV73o0Cx7hX8vHYigFtEvMIDF4lVy/exec";
+    const webAppUrl = "https://script.google.com/macros/s/AKfycbyieHGV8i9dCLLeC11qVK4wRsmJBr_BWB0ZGBObo-zoeMu9nINHXIs_Z0xsOsFOFV1f/exec";
 
-    // 1. เช็คว่าเป็น iOS (iPhone/iPad) หรือไม่ -> ถ้าใช่ Redirect ทันที
+    // 1. เช็คว่าเป็น iPhone / iPad หรือไม่ -> ถ้าใช่ให้ Redirect ทันที
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
                   (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
@@ -16,34 +16,19 @@
       window.location.href = webAppUrl;
     }
 
-    // 2. ตัวแปรเก็บสถานะและ Timer
-    let isAppLoaded = false;
-    let fallbackTimer = null;
+    // 2. สำหรับ PC/Windows: ตั้งค่าเริ่มต้นว่า "ห้าม Redirect" (ไม่ใช้ Timer ถอยหลังแล้ว)
+    let is401OrError = false;
 
-    function cancelRedirect(reason) {
-      if (!isAppLoaded) {
-        isAppLoaded = true;
-        if (fallbackTimer) {
-          clearTimeout(fallbackTimer);
-          fallbackTimer = null;
-        }
-        console.log("Redirect cancelled due to:", reason);
-      }
+    // ฟังก์ชันสั่ง Redirect เมื่อมั่นใจว่าติด 401 จริงๆ
+    function redirectToApp() {
+      window.location.href = webAppUrl;
     }
 
-    // 3. ตั้งเวลาถอยหลัง 8 วินาที
-    fallbackTimer = setTimeout(function() {
-      if (!isAppLoaded) {
-        console.log("Timeout reached. Redirecting to Web App...");
-        window.location.href = webAppUrl;
-      }
-    }, 8000);
-
-    // 4. ดักฟังการส่งสัญญาณข้าม Domain
+    // 3. ดักฟังการแจ้งเตือนจาก Apps Script
     window.addEventListener("message", function(event) {
-      // ยกเลิก Redirect ทันทีถ้ารับข้อความ GAS_LOADED
-      if (event.data && (event.data === "GAS_LOADED" || (typeof event.data === "string" && event.data.includes("GAS_LOADED")))) {
-        cancelRedirect("postMessage GAS_LOADED");
+      // ถ้า Apps Script แจ้งว่าติด 401 ให้ Redirect ทันที
+      if (event.data === "NEED_REDIRECT_401") {
+        redirectToApp();
       }
     }, false);
   </script>
@@ -66,10 +51,10 @@
 </head>
 <body>
 
-  <!-- ใช้ onload สั่งยกเลิก Redirect ร่วมด้วย -->
+  <!-- iframe จะโหลดปกติ หากเกิด Error จากการติด 401/Blocked จะเรียก onerror สั่ง Redirect -->
   <iframe 
-    src="https://script.google.com/macros/s/AKfycbzl8BdqoJVL0-LtFIQkUgMmoXXGKvF-Kt4Y6ZwPV73o0Cx7hX8vHYigFtEvMIDF4lVy/exec"
-    onload="cancelRedirect('iframe onload event')">
+    src="https://script.google.com/macros/s/AKfycbyieHGV8i9dCLLeC11qVK4wRsmJBr_BWB0ZGBObo-zoeMu9nINHXIs_Z0xsOsFOFV1f/exec"
+    onerror="redirectToApp()">
   </iframe>
 
 </body>
