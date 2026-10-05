@@ -3,13 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>LeaveFrom</title>
+  <title>Leave View</title>
   
   <script>
-    // URL ของ Google Apps Script Web App (LeaveFrom)
-    const webAppUrl = "https://script.google.com/macros/s/AKfycby5frMs-mGHn0sjO6Je5J-NgI31RJTXKLqUKp-JfPN_kvuoVrKF4YLR2CeQFWnMnW-n/exec";
+    const webAppUrl = "https://script.google.com/macros/s/AKfycbwBfNj43klMruKM4lmSbZyBklt3atZke-gvxArmNN-_0yrjjqCZSiXQV0VmZw4m3M9U/exec";
 
-    // 1. เช็คว่าเป็น iPhone / iPad / iPod (iOS) หรือไม่ -> ถ้าใช่ ให้ Redirect ทันที
+    // 1. ตรวจสอบ iOS (iPhone/iPad) -> ถ้าใช่ให้ Redirect ทันที
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
                   (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
@@ -17,27 +16,26 @@
       window.location.href = webAppUrl;
     }
 
-    // 2. สำหรับอุปกรณ์อื่น: ตั้งตัวจับเวลาสำหรับกรณีติด 401 หรือ iframe โดนบล็อก Cookie
-    // หากผ่านไป 2.5 วินาที แล้ว iframe ไม่ส่งสัญญาณตอบกลับว่าโหลดสำเร็จ จะ Redirect ไปหน้า Web App ตรงๆ ทันที
+    // 2. ตัวแปรควบคุมสถานะ
     let isAppLoaded = false;
-    
-    const fallbackTimer = setTimeout(function() {
+
+    // 3. ดักฟัง postMessage จาก Google Apps Script
+    window.addEventListener("message", function(event) {
+      // เมื่อได้รับข้อความ GAS_LOADED ให้ยกเลิกการ Redirect ทันที
+      if (event.data === "GAS_LOADED") {
+        isAppLoaded = true;
+      }
+    }, false);
+
+    // 4. ตัวจับเวลา Fallback (หากผ่านไป 5 วินาทีแล้วยังไม่ได้ข้อความ GAS_LOADED แสดงว่าติด 401)
+    setTimeout(function() {
       if (!isAppLoaded) {
         window.location.href = webAppUrl;
       }
-    }, 6000);
-
-    // ดักรับสัญญาณตอบกลับเมื่อ Google Apps Script โหลดขึ้นมาสำเร็จจริง
-    window.addEventListener("message", function(event) {
-      if (event.data === "GAS_LOADED") {
-        isAppLoaded = true;
-        clearTimeout(fallbackTimer);
-      }
-    });
+    }, 2000);
   </script>
 
   <style>
-    /* ตั้งค่าให้ iframe แสดงผลเต็มจอพอดีกับหน้าเว็บ */
     html, body {
       margin: 0;
       padding: 0;
@@ -55,8 +53,7 @@
 </head>
 <body>
 
-  <!-- ฝัง Web App ผ่าน iframe -->
-  <iframe src="https://script.google.com/macros/s/AKfycby5frMs-mGHn0sjO6Je5J-NgI31RJTXKLqUKp-JfPN_kvuoVrKF4YLR2CeQFWnMnW-n/exec"></iframe>
+  <iframe src="https://script.google.com/macros/s/AKfycbwBfNj43klMruKM4lmSbZyBklt3atZke-gvxArmNN-_0yrjjqCZSiXQV0VmZw4m3M9U/exec"></iframe>
 
 </body>
 </html>
