@@ -16,23 +16,33 @@
       window.location.href = webAppUrl;
     }
 
-    // 2. ตัวแปรควบคุมสถานะ
-    let isAppLoaded = false;
+    // 2. ตัวแปรเก็บ Timer เพื่อสั่งหยุด
+    let fallbackTimer = null;
 
-    // 3. ดักฟัง postMessage จาก Google Apps Script
-    window.addEventListener("message", function(event) {
-      // เมื่อได้รับข้อความ GAS_LOADED ให้ยกเลิกการ Redirect ทันที
-      if (event.data === "GAS_LOADED") {
-        isAppLoaded = true;
+    // ฟังก์ชันหยุดการ Redirect ทันทีเมื่อได้รับสัญญาณ
+    function stopRedirect() {
+      if (fallbackTimer) {
+        clearTimeout(fallbackTimer);
+        fallbackTimer = null;
+        console.log("GAS Loaded successfully. Redirect cancelled.");
       }
-    }, false);
+    }
 
-    // 4. ตัวจับเวลา Fallback (หากผ่านไป 5 วินาทีแล้วยังไม่ได้ข้อความ GAS_LOADED แสดงว่าติด 401)
-    setTimeout(function() {
-      if (!isAppLoaded) {
-        window.location.href = webAppUrl;
-      }
+    // 3. ตั้งเวลาถอยหลัง 6 วินาที (ถ้าไม่ได้รับสัญญาณจะ Redirect)
+    fallbackTimer = setTimeout(function() {
+      console.log("Timeout reached. Redirecting...");
+      window.location.href = webAppUrl;
     }, 6000);
+
+    // 4. ดักฟัง postMessage จาก Google Apps Script (ยืดหยุ่นขึ้น)
+    window.addEventListener("message", function(event) {
+      try {
+        // ถ้ารับข้อความที่มีคำว่า GAS_LOADED ให้สั่งหยุด Redirect ทันที
+        if (event.data && typeof event.data === "string" && event.data.indexOf("GAS_LOADED") !== -1) {
+          stopRedirect();
+        }
+      } catch (e) {}
+    }, false);
   </script>
 
   <style>
@@ -53,7 +63,11 @@
 </head>
 <body>
 
-  <iframe src="https://script.google.com/macros/s/AKfycbzl8BdqoJVL0-LtFIQkUgMmoXXGKvF-Kt4Y6ZwPV73o0Cx7hX8vHYigFtEvMIDF4lVy/exec"></iframe>
+  <!-- เพิ่ม onload="stopRedirect()" สำรองไว้อีกชั้น -->
+  <iframe 
+    src="https://script.google.com/macros/s/AKfycbzl8BdqoJVL0-LtFIQkUgMmoXXGKvF-Kt4Y6ZwPV73o0Cx7hX8vHYigFtEvMIDF4lVy/exec"
+    onload="stopRedirect()">
+  </iframe>
 
 </body>
 </html>
