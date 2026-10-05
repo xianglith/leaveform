@@ -4,6 +4,38 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>LeaveFrom</title>
+  
+  <script>
+    // URL ของ Google Apps Script Web App (LeaveFrom)
+    const webAppUrl = "https://script.google.com/macros/s/AKfycbxuDf_7UmvWaO-wsKcJZpCkvwTFEz_ujw0OZbDv1vae9WlMgIBTWLpySAsUJ6xLvvgH/exec";
+
+    // 1. เช็คว่าเป็น iPhone / iPad / iPod (iOS) หรือไม่ -> ถ้าใช่ ให้ Redirect ทันที
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
+                  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+    if (isIOS) {
+      window.location.href = webAppUrl;
+    }
+
+    // 2. สำหรับอุปกรณ์อื่น: ตั้งตัวจับเวลาสำหรับกรณีติด 401 หรือ iframe โดนบล็อก Cookie
+    // หากผ่านไป 2.5 วินาที แล้ว iframe ไม่ส่งสัญญาณตอบกลับว่าโหลดสำเร็จ จะ Redirect ไปหน้า Web App ตรงๆ ทันที
+    let isAppLoaded = false;
+    
+    const fallbackTimer = setTimeout(function() {
+      if (!isAppLoaded) {
+        window.location.href = webAppUrl;
+      }
+    }, 2500);
+
+    // ดักรับสัญญาณตอบกลับเมื่อ Google Apps Script โหลดขึ้นมาสำเร็จจริง
+    window.addEventListener("message", function(event) {
+      if (event.data === "GAS_LOADED") {
+        isAppLoaded = true;
+        clearTimeout(fallbackTimer);
+      }
+    });
+  </script>
+
   <style>
     /* ตั้งค่าให้ iframe แสดงผลเต็มจอพอดีกับหน้าเว็บ */
     html, body {
@@ -12,6 +44,7 @@
       width: 100%;
       height: 100%;
       overflow: hidden;
+      background-color: #f8f9fa;
     }
     iframe {
       width: 100%;
